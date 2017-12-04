@@ -212,10 +212,41 @@ class Example(Frame):
         menubar.add_cascade(label="Injection", underline=0, menu=injmenu)
         menubar.add_cascade(label="Monitoring", underline=0, menu=monmenu)
         menubar.add_cascade(label="Options", underline=0, menu=optionsMenu)
-        line = "Welcome to the PyDebugger version 3.0"
+        line = "Welcome to the PyDebugger version 3.1"
         self.print2(line)
         self.rClickbinder(self.textPad)
         self.textPad.bind("<Key>", self.highlighter)
+
+    def print2(self, line):
+        print line
+        try:
+            line.strip("\n")
+            line = "{}\n".format(line)
+            #line = "" + line
+        except:
+            pass   #Probably a list 
+        self.textPad.insert('1.0', line)
+        self.highlighter(1)
+        time.sleep(time2)
+
+    def highlighter(self, r):
+        if not self.coloring:
+            return False
+        for k,v in highlightWords.iteritems(): # iterate over dict
+            startIndex = '1.0'
+            try:
+                while True:
+                    startIndex = self.textPad.search(k, startIndex, END) # search for occurence of k
+                    if startIndex:
+                        endIndex = self.textPad.index('%s+%dc' % (startIndex, (len(k)))) # find end of k
+                        self.textPad.tag_add(k, startIndex, endIndex) # add tag to k
+                        self.textPad.tag_config(k, foreground=v)      # and color it with v
+                        startIndex = endIndex # reset startIndex to continue searching
+                    else:
+                        break
+            except:
+                pass
+        return True
 
     def diss_around(self):
         if self.PID == self.OPEN:
@@ -428,7 +459,7 @@ class Example(Frame):
 
         # extension based code snippets to inject
         file_types         = {}
-        command = "C:\\WINDOWS\\TEMP\\bhpnet.exe –l –p 9999 –c"
+        command = "C:\\WINDOWS\\TEMP\\bhpnet.exe â€“l â€“p 9999 â€“c"
         file_types['.vbs'] = ["\r\n'bhpmarker\r\n","\r\nCreateObject(\"Wscript.Shell\").Run(\"%s\")\r\n" % command]
         file_types['.bat'] = ["\r\nREM bhpmarker\r\n","\r\n%s\r\n" % command]
         file_types['.ps1'] = ["\r\nbhpmarker","Start-Process \"%s\"" % command]
@@ -462,7 +493,7 @@ class Example(Frame):
         FILE_RENAMED_FROM = 4
         FILE_RENAMED_TO   = 5
         file_types         = {}
-        command = "C:\\WINDOWS\\TEMP\\bhpnet.exe –l –p 9999 –c"
+        command = "C:\\WINDOWS\\TEMP\\bhpnet.exe â€“l â€“p 9999 â€“c"
         file_types['.vbs'] = ["\r\n'bhpmarker\r\n","\r\nCreateObject(\"Wscript.Shell\").Run(\"%s\")\r\n" % command]
         file_types['.bat'] = ["\r\nREM bhpmarker\r\n","\r\n%s\r\n" % command]
         file_types['.ps1'] = ["\r\nbhpmarker","Start-Process \"%s\"" % command]
@@ -738,25 +769,6 @@ class Example(Frame):
 
     def off(self):
         self.coloring = False
-        
-    def highlighter(self, r):
-        if not self.coloring:
-            return False
-        for k,v in highlightWords.iteritems(): # iterate over dict
-            startIndex = '1.0'
-            try:
-                while True:
-                    startIndex = self.textPad.search(k, startIndex, END) # search for occurence of k
-                    if startIndex:
-                        endIndex = self.textPad.index('%s+%dc' % (startIndex, (len(k)))) # find end of k
-                        self.textPad.tag_add(k, startIndex, endIndex) # add tag to k
-                        self.textPad.tag_config(k, foreground=v)      # and color it with v
-                        startIndex = endIndex # reset startIndex to continue searching
-                    else:
-                        break
-            except:
-                pass
-        return True
 
     def single_step_handler(self, dbg):
         global instruction_count
@@ -808,25 +820,28 @@ instruction))
         if self.hide2:
             dbg.set_callback(EXCEPTION_BREAKPOINT, self.hide_bp)
         for line in file.readlines():
-            line = re.sub("[^\w]", " ",  line).split()
-            if debugger == "pydbg":
-                func_address = dbg.func_resolve(line[0],line[2])
-                self.print2("Address of %s(%s) is: %s" % (line[2], line[0], func_address))
-                if self.BreakFunk == 1:
-                    dbg.bp_set(func_address, description=line[2],handler=self.handler_breakpoint)
-                elif self.BreakFunk == 2:
-                    self.print2("[*] Using 'SEH Unwind' handler")
-                    dbg.bp_set(func_address, description=line[2],handler=self.SEH_unwind)
-                elif self.BreakFunk == 3:
-                    self.print2("[*] Using 'Dump Heap Info' handler")
-                    dbg.bp_set(func_address, description=line[2],handler=self.dump_info)
-                elif self.BreakFunk == 4:
-                    self.print2("[*] Using 'Disassem Around' handler")
-                    dbg.bp_set(func_address, description=line[2],handler=self.disassem)
-                elif self.BreakFunk == 5:
-                    self.print2("[*] Using 'All info handler'")
-                    dbg.bp_set(func_address, description=line[2],handler=self.all_info)
-                self.print2("Set Breakpoint on %s at address %s" % (line[2], func_address))
+            try:
+                line = re.sub("[^\w]", " ",  line).split()
+                if debugger == "pydbg":
+                    func_address = dbg.func_resolve(line[0],line[2])
+                    self.print2("Address of %s(%s) is: 0x%08x" % (line[2], line[0], func_address))
+                    if self.BreakFunk == 1:
+                        dbg.bp_set(func_address, description=line[2],handler=self.handler_breakpoint)
+                    elif self.BreakFunk == 2:
+                        self.print2("[*] Using 'SEH Unwind' handler")
+                        dbg.bp_set(func_address, description=line[2],handler=self.SEH_unwind)
+                    elif self.BreakFunk == 3:
+                        self.print2("[*] Using 'Dump Heap Info' handler")
+                        dbg.bp_set(func_address, description=line[2],handler=self.dump_info)
+                    elif self.BreakFunk == 4:
+                        self.print2("[*] Using 'Disassem Around' handler")
+                        dbg.bp_set(func_address, description=line[2],handler=self.disassem)
+                    elif self.BreakFunk == 5:
+                        self.print2("[*] Using 'All info handler'")
+                        dbg.bp_set(func_address, description=line[2],handler=self.all_info)
+                    self.print2("Set Breakpoint on %s at address 0x%08x" % (line[2], func_address))
+            except:
+                self.print2("[-] Error setting breakpoint on %s(%s) at address 0x%08x" % (line[2], line[0], func_address))
         self.print2("[*] Done with breakpoints") 
             
             
@@ -2161,7 +2176,72 @@ class popupWindowDISS(object):
         self.top.destroy()
         print "[+]\t\tAdded shellcode: %s" % self.value
         print "[*]Hit Start or select  a different engine from the debug menu"
+
+class popupWindowSearchMemory(object):
+    
+    def __init__(self,master):
+        top=self.top=Toplevel(master)
+        self.top.geometry("10x80+300+300")
+        self.l=Label(top,text="String:")
+        self.l.pack()
+        self.e=Entry(top)
+        self.e.pack()
+        self.b=Button(top,text='Done',command=self.cleanup)
+        self.b.pack()
         
+    def rClicker(self,e):
+        ''' right click context menu for all Tk Entry and Text widgets
+        '''
+
+        try:
+            def rClick_Copy(e, apnd=0):
+                e.widget.event_generate('<Control-c>')
+
+            def rClick_Cut(e):
+                e.widget.event_generate('<Control-x>')
+
+            def rClick_Paste(e):
+                e.widget.event_generate('<Control-v>')
+
+            e.widget.focus()
+
+            nclst=[
+                   (' Cut', lambda e=e: rClick_Cut(e)),
+                   (' Copy', lambda e=e: rClick_Copy(e)),
+                   (' Paste', lambda e=e: rClick_Paste(e)),
+                   ]
+
+            rmenu = Menu(None, tearoff=0, takefocus=0)
+
+            for (txt, cmd) in nclst:
+                rmenu.add_command(label=txt, command=cmd)
+
+            rmenu.tk_popup(e.x_root+40, e.y_root+10,entry="0")
+
+        except TclError:
+            print ' - rClick menu, something wrong'
+            pass
+
+        return "break"
+    
+    def rClickbinder(self,r):
+
+        try:
+            for b in [ 'Text', 'Entry', 'Listbox', 'Label']: #
+                r.bind_class(b, sequence='<Button-3>',
+                         func=self.rClicker, add='')
+        except TclError:
+            print ' - rClickbinder, something wrong'
+            pass
+
+        
+    def cleanup(self):
+        print "[*]\tDestroying Dissasem around window(If you entered nothing, expect an error)"
+        self.value=data = self.e.get()
+        self.top.destroy()
+        print "[+]\t\tAdded shellcode: %s" % self.value
+        print "[*]Hit Start or select  a different engine from the debug menu"
+
 def main():
     root = Tk()
     look = os.path.isfile('grade.ico')
@@ -2172,7 +2252,8 @@ def main():
     root.geometry("750x450+300+300")
     print "[==Welcome to PyDebugger====]"
     print "[===Written by Starwarsfan2099]"
-    print "[====Check out github.com/Starwarsfan2099 for support and more projects]"
+    print "[======Version: 3.1-1=========]"
+    print "[====Check out github.com/Starwarsfan2099 for more great tools]"
     print "Help, errors, and other info will be displayed here(Plus the same info displayed in the main windows)"
     app = Example(root)
     root.mainloop()
@@ -2180,5 +2261,3 @@ def main():
 
 if __name__ == '__main__':
     main()  
-
-
